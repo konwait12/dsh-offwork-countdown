@@ -1,0 +1,8 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 64 64" width="64" height="64" role="img" aria-label="Off-work countdown">
+  <rect width="64" height="64" rx="14" fill="#1b2b4a"/>
+  <circle cx="32" cy="31" r="12" fill="#f6b93b"/>
+  <path d="M32 24v7.5l5 3" fill="none" stroke="#1b2b4a" stroke-width="2.6" stroke-linecap="round" stroke-linejoin="round"/>
+  <path d="M32 8v6M17.6 13.6l4.4 4.4M46.4 13.6 42 18" fill="none" stroke="#f6b93b" stroke-width="3" stroke-linecap="round"/>
+  <path d="M8 47h48" fill="none" stroke="#f6b93b" stroke-width="4" stroke-linecap="round"/>
+  <path d="M15 55h34" fill="none" stroke="#ffffff" stroke-opacity="0.3" stroke-width="3" stroke-linecap="round"/>
+</svg>

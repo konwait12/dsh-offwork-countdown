@@ -1,0 +1,5 @@
+# Adds the off-work countdown bundle row. The Host half is a no-op plugin;
+# the browser half renders the floating card into the shell overlay layer.
+- insert:
+    - id: offwork-countdown
+      name: 'dsh-offwork-countdown'

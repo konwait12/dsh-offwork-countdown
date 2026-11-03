@@ -1,0 +1,6 @@
+{
+  "meta": {
+    "title": "Off-work countdown",
+    "description": "Shows a small off-work countdown card in the page's top-right corner with the remaining time, a day progress bar, and inline work-hour settings."
+  }
+}
