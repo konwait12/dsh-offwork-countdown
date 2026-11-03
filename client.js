@@ -204,25 +204,38 @@ window.__ModuleLoader__.load({
 			}
 		}
 
-		/** Keep a dragged card fully inside the viewport. */
+		/**
+		 * Keep a dragged card fully inside the viewport. The position is anchored by
+		 * the card's right edge, so switching between the full card and the mini pill
+		 * grows and shrinks toward the right instead of drifting left.
+		 */
 		function clampPosition(position, width, height) {
-			const maxX = Math.max(0, window.innerWidth - width);
-			const maxY = Math.max(0, window.innerHeight - height);
+			const maxRight = Math.max(0, window.innerWidth - width);
+			const maxTop = Math.max(0, window.innerHeight - height);
 			return {
-				x: Math.min(Math.max(0, Math.round(position.x)), maxX),
-				y: Math.min(Math.max(0, Math.round(position.y)), maxY)
+				right: Math.min(Math.max(0, Math.round(position.right)), maxRight),
+				top: Math.min(Math.max(0, Math.round(position.top)), maxTop)
 			};
 		}
 
-		/** Read a dragged position (`null` means "use the default top-right anchor"). */
+		/**
+		 * Read a dragged position anchored by the right edge (`null` means "use the
+		 * default top-right anchor"). Older builds stored a left-anchored `{x, y}`;
+		 * that shape is migrated on mount when the card width is known.
+		 */
 		function loadPosition() {
 			try {
 				const raw = window.localStorage.getItem(POSITION_KEY);
 				if (raw === null) return null;
 				const parsed = JSON.parse(raw);
 				if (parsed === null || typeof parsed !== 'object') return null;
-				if (typeof parsed.x !== 'number' || typeof parsed.y !== 'number') return null;
-				return { x: parsed.x, y: parsed.y };
+				if (typeof parsed.right === 'number' && typeof parsed.top === 'number') {
+					return { right: parsed.right, top: parsed.top };
+				}
+				if (typeof parsed.x === 'number' && typeof parsed.y === 'number') {
+					return { x: parsed.x, y: parsed.y };
+				}
+				return null;
 			} catch (error) {
 				return null;
 			}
@@ -360,9 +373,23 @@ window.__ModuleLoader__.load({
 				};
 			}, []);
 
-			React.useEffect(() => {
-				positionRef.current = position;
-			}, [position]);
+			// Migrate a left-anchored spot saved by an older build; the card width is only
+			// known once it has rendered, so this runs in the layout phase.
+			React.useLayoutEffect(() => {
+				const saved = positionRef.current;
+				if (saved === null || typeof saved.right === 'number') return;
+				const card = cardRef.current;
+				if (card === null) return;
+				const rect = card.getBoundingClientRect();
+				const next = clampPosition(
+					{ right: window.innerWidth - (saved.x + rect.width), top: saved.y },
+					rect.width,
+					rect.height
+				);
+				positionRef.current = next;
+				setPosition(next);
+				savePosition(next);
+			}, []);
 
 			// The right panel pushes the card to its left and shrinks it to the mini card,
 			// so it never sits on top of the panel. The resolved geometry lives on the shell
@@ -462,10 +489,10 @@ window.__ModuleLoader__.load({
 			React.useEffect(() => {
 				const saved = positionRef.current;
 				const card = cardRef.current;
-				if (saved === null || card === null) return;
+				if (saved === null || card === null || typeof saved.right !== 'number') return;
 				const rect = card.getBoundingClientRect();
 				const next = clampPosition(saved, rect.width, rect.height);
-				if (next.x === saved.x && next.y === saved.y) return;
+				if (next.right === saved.right && next.top === saved.top) return;
 				positionRef.current = next;
 				setPosition(next);
 			}, [compact]);
@@ -475,10 +502,10 @@ window.__ModuleLoader__.load({
 				const keepOnScreen = () => {
 					const saved = positionRef.current;
 					const card = cardRef.current;
-					if (saved === null || card === null) return;
+					if (saved === null || card === null || typeof saved.right !== 'number') return;
 					const rect = card.getBoundingClientRect();
 					const next = clampPosition(saved, rect.width, rect.height);
-					if (next.x === saved.x && next.y === saved.y) return;
+					if (next.right === saved.right && next.top === saved.top) return;
 					positionRef.current = next;
 					setPosition(next);
 				};
@@ -499,11 +526,15 @@ window.__ModuleLoader__.load({
 					}
 					const rect = card.getBoundingClientRect();
 					const shift = panelShiftRef.current;
-					const maxX = Math.max(0, window.innerWidth - shift - rect.width);
-					const maxY = Math.max(0, window.innerHeight - rect.height);
+					const available = Math.max(0, window.innerWidth - shift - rect.width);
+					const left = Math.min(Math.max(0, Math.round(event.clientX - drag.dx)), available);
+					const top = Math.min(
+						Math.max(0, Math.round(event.clientY - drag.dy)),
+						Math.max(0, window.innerHeight - rect.height)
+					);
 					const next = {
-						x: Math.min(Math.max(0, Math.round(event.clientX - drag.dx)), maxX) + shift,
-						y: Math.min(Math.max(0, Math.round(event.clientY - drag.dy)), maxY)
+						right: Math.max(0, window.innerWidth - (left + rect.width) - shift),
+						top
 					};
 					positionRef.current = next;
 					setPosition(next);
@@ -763,12 +794,16 @@ window.__ModuleLoader__.load({
 				)
 			);
 
+			const anchoredRight =
+				position !== null && typeof position.right === 'number'
+					? Math.max(0, position.right + panelShift)
+					: null;
 			const rootStyle =
-				position === null
+				anchoredRight === null
 					? panelShift > 0
 						? { right: panelShift + 16 + 'px' }
 						: undefined
-					: { left: Math.max(0, position.x - panelShift) + 'px', top: position.y + 'px', right: 'auto' };
+					: { right: anchoredRight + 'px', top: position.top + 'px' };
 
 			if (rightPanel.fullscreen) return null;
 
