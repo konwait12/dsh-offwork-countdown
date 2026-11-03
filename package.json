@@ -1,6 +1,6 @@
 {
   "name": "dsh-offwork-countdown",
-  "version": "1.0.0",
+  "version": "1.1.0",
   "description": "A draggable off-work countdown card for the DeepSeek Harness Web GUI: remaining time, day progress, and inline work-hour settings.",
   "license": "MIT",
   "type": "module",

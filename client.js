@@ -8,11 +8,14 @@ window.__ModuleLoader__.load({
 		const NS = 'offwork-countdown';
 		const STORAGE_KEY = 'dsh.offwork-countdown.v1';
 		const POSITION_KEY = 'dsh.offwork-countdown.position.v1';
+		const COMPACT_KEY = 'dsh.offwork-countdown.compact.v1';
 		const DEFAULTS = { start: '09:00', end: '18:00', weekdaysOnly: true };
 
 		/** Simplified Chinese dictionary (key-set source of truth). */
 		const ZH = {
 			'card.label': '下班倒计时',
+			'card.collapse': '收起为小卡片',
+			'card.expand': '展开卡片',
 			'title.working': '距离下班',
 			'title.done': '已下班',
 			'title.rest': '休息日',
@@ -45,6 +48,8 @@ window.__ModuleLoader__.load({
 		/** English dictionary, checked complete against the ZH key set. */
 		const EN = {
 			'card.label': 'Off-work countdown',
+			'card.collapse': 'Collapse to mini card',
+			'card.expand': 'Expand card',
 			'title.working': 'Until off work',
 			'title.done': 'Off work',
 			'title.rest': 'Day off',
@@ -93,10 +98,11 @@ window.__ModuleLoader__.load({
 			'color:var(--dsw-alias-label-primary)}' +
 			'.ofw-card[data-kind="done"] .ofw-time{color:var(--dsw-alias-state-success-primary)}' +
 			'.ofw-card[data-kind="rest"] .ofw-time{font-size:15px;color:var(--dsw-alias-label-secondary)}' +
-			'.ofw-gear{flex:none;display:grid;place-items:center;width:24px;height:24px;margin:-2px -6px -2px 0;padding:0;' +
-			'border:none;border-radius:6px;background:transparent;color:var(--dsw-alias-label-secondary);cursor:pointer;font:inherit}' +
-			'.ofw-gear:hover{background:var(--dsw-alias-bg-layer-2);color:var(--dsw-alias-label-primary)}' +
-			'.ofw-gear:focus-visible{outline:2px solid var(--dsw-alias-brand-primary);outline-offset:1px}' +
+			'.ofw-tools{flex:none;display:flex;align-items:center;gap:2px;margin:-2px -6px -2px 0}' +
+			'.ofw-tool{flex:none;display:grid;place-items:center;width:24px;height:24px;padding:0;border:none;' +
+			'border-radius:6px;background:transparent;color:var(--dsw-alias-label-secondary);cursor:pointer;font:inherit}' +
+			'.ofw-tool:hover{background:var(--dsw-alias-bg-layer-2);color:var(--dsw-alias-label-primary)}' +
+			'.ofw-tool:focus-visible{outline:2px solid var(--dsw-alias-brand-primary);outline-offset:1px}' +
 			'.ofw-track{display:block;height:4px;border-radius:999px;background:var(--dsw-alias-bg-layer-2);overflow:hidden}' +
 			'.ofw-fill{display:block;height:100%;border-radius:999px;background:var(--dsw-alias-brand-primary);transition:width .4s ease}' +
 			'.ofw-card[data-kind="done"] .ofw-fill{background:var(--dsw-alias-state-success-primary)}' +
@@ -104,6 +110,22 @@ window.__ModuleLoader__.load({
 			'color:var(--dsw-alias-label-secondary)}' +
 			'.ofw-metaText{flex:1 1 auto;min-width:0;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}' +
 			'.ofw-percent{flex:none;font-variant-numeric:tabular-nums}' +
+			'.ofw-mini{display:flex;align-items:center;gap:6px;max-width:100%;padding:5px 10px;' +
+			'border:.5px solid var(--dsw-alias-border-l1);border-radius:999px;background:var(--dsw-alias-bg-overlay);' +
+			'box-shadow:var(--dsw-elevation-panel);pointer-events:auto;color:var(--dsw-alias-label-primary);' +
+			'font:inherit;font-size:12px;cursor:pointer;user-select:none;touch-action:none}' +
+			'.ofw-mini[data-dragging="true"]{box-shadow:var(--dsw-elevation-prominent);cursor:grabbing}' +
+			'.ofw-mini:focus-visible{outline:2px solid var(--dsw-alias-brand-primary);outline-offset:1px}' +
+			'.ofw-mini .ofw-lead{width:14px;height:14px}' +
+			'.ofw-mini-time{flex:none;white-space:nowrap;font-family:ui-monospace,SFMono-Regular,Menlo,Consolas,monospace;' +
+			'font-size:14px;line-height:18px;font-weight:600;letter-spacing:.2px;font-variant-numeric:tabular-nums}' +
+			'.ofw-mini[data-kind="done"] .ofw-mini-time{color:var(--dsw-alias-state-success-primary)}' +
+			'.ofw-mini[data-kind="rest"] .ofw-mini-time{color:var(--dsw-alias-label-secondary)}' +
+			'.ofw-mini-track{display:block;flex:none;width:26px;height:3px;border-radius:999px;' +
+			'background:var(--dsw-alias-bg-layer-2);overflow:hidden}' +
+			'.ofw-mini-fill{display:block;height:100%;border-radius:999px;background:var(--dsw-alias-brand-primary);' +
+			'transition:width .4s ease}' +
+			'.ofw-mini[data-kind="done"] .ofw-mini-fill{background:var(--dsw-alias-state-success-primary)}' +
 			'.ofw-form{display:flex;flex-direction:column;gap:8px;min-width:0}' +
 			'.ofw-formHead{display:flex;align-items:baseline;gap:8px;min-width:0}' +
 			'.ofw-formTitle{flex:none;font-size:12px;line-height:18px;font-weight:500;color:var(--dsw-alias-label-primary)}' +
@@ -126,7 +148,7 @@ window.__ModuleLoader__.load({
 			'.ofw-btn:focus-visible{outline:2px solid var(--dsw-alias-brand-primary);outline-offset:1px}' +
 			'.ofw-btnGhost{margin-right:auto;border-color:transparent;color:var(--dsw-alias-label-secondary)}' +
 			'.ofw-btnPrimary{border-color:var(--dsw-alias-brand-primary);color:var(--dsw-alias-brand-primary)}' +
-			'@media (prefers-reduced-motion:reduce){.ofw-fill{transition:none}}';
+			'@media (prefers-reduced-motion:reduce){.ofw-fill,.ofw-mini-fill{transition:none}}';
 
 		const toPad = (value) => String(value).padStart(2, '0');
 
@@ -214,6 +236,23 @@ window.__ModuleLoader__.load({
 			}
 		}
 
+		/** The user's own mini-card preference; the right panel also forces mini while open. */
+		function loadCompact() {
+			try {
+				return window.localStorage.getItem(COMPACT_KEY) === '1';
+			} catch (error) {
+				return false;
+			}
+		}
+
+		function saveCompact(compact) {
+			try {
+				window.localStorage.setItem(COMPACT_KEY, compact ? '1' : '0');
+			} catch (error) {
+				// A blocked storage only loses the remembered size.
+			}
+		}
+
 		/** Next working weekday after `now`, used by the rest-state subtitle. */
 		function nextWorkday(now, settings) {
 			const probe = new Date(now.getTime());
@@ -283,6 +322,14 @@ window.__ModuleLoader__.load({
 			);
 		}
 
+		function collapseIcon() {
+			return h(
+				'svg',
+				{ viewBox: '0 0 16 16', width: 14, height: 14, fill: 'none', 'aria-hidden': true },
+				h('path', { d: 'M3.5 8h9', stroke: 'currentColor', strokeWidth: 1.4, strokeLinecap: 'round' })
+			);
+		}
+
 		/** One small floating card in the top-right corner: countdown, progress, and inline settings. */
 		function CountdownCard(props) {
 			const t = typeof props.t === 'function' ? props.t : fallbackTranslate;
@@ -293,9 +340,12 @@ window.__ModuleLoader__.load({
 			const [error, setError] = React.useState('');
 			const [position, setPosition] = React.useState(loadPosition);
 			const [dragging, setDragging] = React.useState(false);
+			const [compact, setCompact] = React.useState(loadCompact);
+			const [rightPanel, setRightPanel] = React.useState({ open: false, width: 0, fullscreen: false });
 			const cardRef = React.useRef(null);
 			const positionRef = React.useRef(position);
 			const dragRef = React.useRef(null);
+			const suppressClickRef = React.useRef(false);
 
 			React.useEffect(() => {
 				const tick = () => setNowMs(Date.now());
@@ -313,6 +363,112 @@ window.__ModuleLoader__.load({
 			React.useEffect(() => {
 				positionRef.current = position;
 			}, [position]);
+
+			// The right panel pushes the card to its left and shrinks it to the mini card,
+			// so it never sits on top of the panel. The resolved geometry lives on the shell
+			// frame, which is the only place that knows the right track width.
+			React.useEffect(() => {
+				const card = cardRef.current;
+				const layer = card === null ? null : card.closest('[data-shell-overlay]');
+				const frame = layer === null ? null : layer.parentElement;
+				if (frame === null) return undefined;
+				const column = frame.querySelector('[data-rightbar-col]');
+				let panel = null;
+				let panelResize = null;
+				let panelAttributes = null;
+				let scheduled = 0;
+
+				function apply() {
+					const panels = frame.querySelectorAll('[data-sidebar-right-panel]');
+					let active = null;
+					for (const candidate of panels) {
+						if (candidate.hasAttribute('data-sidebar-right-open')) active = candidate;
+					}
+					if (active === null && panels.length > 0) active = panels[panels.length - 1];
+					if (active !== panel) {
+						if (panelResize !== null) panelResize.disconnect();
+						if (panelAttributes !== null) panelAttributes.disconnect();
+						panelResize = null;
+						panelAttributes = null;
+						panel = active;
+						if (panel !== null) {
+							panelResize = new ResizeObserver(schedule);
+							panelResize.observe(panel);
+							panelAttributes = new MutationObserver(schedule);
+							panelAttributes.observe(panel, {
+								attributes: true,
+								attributeFilter: ['data-sidebar-right-open', 'data-sidebar-right-panel']
+							});
+						}
+					}
+					let next = { open: false, width: 0, fullscreen: false };
+					if (panel !== null) {
+						const frameRect = frame.getBoundingClientRect();
+						const panelRect = panel.getBoundingClientRect();
+						const width = Math.max(0, Math.round(frameRect.right - panelRect.left));
+						next = {
+							open: panel.hasAttribute('data-sidebar-right-open') && width > 0,
+							width,
+							fullscreen: panel.getAttribute('data-sidebar-right-panel') === 'fullscreen'
+						};
+					}
+					setRightPanel((previous) =>
+						previous.open === next.open && previous.width === next.width && previous.fullscreen === next.fullscreen
+							? previous
+							: next
+					);
+				}
+
+				function schedule() {
+					if (scheduled !== 0) return;
+					scheduled = window.requestAnimationFrame(() => {
+						scheduled = 0;
+						apply();
+					});
+				}
+
+				const frameAttributes = new MutationObserver(schedule);
+				frameAttributes.observe(frame, {
+					attributes: true,
+					attributeFilter: ['data-rightbar-collapsed', 'data-rightbar-fullscreen']
+				});
+				const columnChildren = column === null ? null : new MutationObserver(schedule);
+				if (columnChildren !== null) columnChildren.observe(column, { childList: true });
+				window.addEventListener('resize', schedule);
+				apply();
+				return () => {
+					if (scheduled !== 0) window.cancelAnimationFrame(scheduled);
+					frameAttributes.disconnect();
+					if (columnChildren !== null) columnChildren.disconnect();
+					if (panelResize !== null) panelResize.disconnect();
+					if (panelAttributes !== null) panelAttributes.disconnect();
+					window.removeEventListener('resize', schedule);
+				};
+			}, []);
+
+			const panelShift = rightPanel.open ? rightPanel.width : 0;
+			const panelShiftRef = React.useRef(panelShift);
+			React.useEffect(() => {
+				panelShiftRef.current = panelShift;
+			});
+
+			const miniMode = compact || rightPanel.open;
+			const miniRef = React.useRef(miniMode);
+			React.useEffect(() => {
+				miniRef.current = miniMode;
+			});
+
+			// A smaller or larger card must still fit where it was dropped.
+			React.useEffect(() => {
+				const saved = positionRef.current;
+				const card = cardRef.current;
+				if (saved === null || card === null) return;
+				const rect = card.getBoundingClientRect();
+				const next = clampPosition(saved, rect.width, rect.height);
+				if (next.x === saved.x && next.y === saved.y) return;
+				positionRef.current = next;
+				setPosition(next);
+			}, [compact]);
 
 			// Keep a dragged card inside the viewport after the window shrinks.
 			React.useEffect(() => {
@@ -338,18 +494,36 @@ window.__ModuleLoader__.load({
 					const drag = dragRef.current;
 					const card = cardRef.current;
 					if (drag === null || card === null) return;
+					if (!drag.moved && (Math.abs(event.clientX - drag.startX) > 3 || Math.abs(event.clientY - drag.startY) > 3)) {
+						drag.moved = true;
+					}
 					const rect = card.getBoundingClientRect();
-					const next = clampPosition(
-						{ x: event.clientX - drag.dx, y: event.clientY - drag.dy },
-						rect.width,
-						rect.height
-					);
+					const shift = panelShiftRef.current;
+					const maxX = Math.max(0, window.innerWidth - shift - rect.width);
+					const maxY = Math.max(0, window.innerHeight - rect.height);
+					const next = {
+						x: Math.min(Math.max(0, Math.round(event.clientX - drag.dx)), maxX) + shift,
+						y: Math.min(Math.max(0, Math.round(event.clientY - drag.dy)), maxY)
+					};
 					positionRef.current = next;
 					setPosition(next);
 				};
 				const finish = () => {
+					const drag = dragRef.current;
+					const moved = drag !== null && drag.moved;
 					setDragging(false);
 					if (positionRef.current !== null) savePosition(positionRef.current);
+					if (!moved && miniRef.current) {
+						// A click (not a drag) on the mini card expands it.
+						setCompact(false);
+						saveCompact(false);
+					}
+					if (moved) {
+						suppressClickRef.current = true;
+						window.setTimeout(() => {
+							suppressClickRef.current = false;
+						}, 0);
+					}
 				};
 				window.addEventListener('pointermove', onMove);
 				window.addEventListener('pointerup', finish);
@@ -420,11 +594,20 @@ window.__ModuleLoader__.load({
 			const startDrag = (event) => {
 				if (mode !== 'card' || event.button !== 0) return;
 				const target = event.target;
-				if (target !== null && typeof target.closest === 'function' && target.closest('button') !== null) return;
+				if (target !== null && typeof target.closest === 'function') {
+					const control = target.closest('button, input, label');
+					if (control !== null && control !== event.currentTarget) return;
+				}
 				const card = cardRef.current;
 				if (card === null) return;
 				const rect = card.getBoundingClientRect();
-				dragRef.current = { dx: event.clientX - rect.left, dy: event.clientY - rect.top };
+				dragRef.current = {
+					dx: event.clientX - rect.left,
+					dy: event.clientY - rect.top,
+					startX: event.clientX,
+					startY: event.clientY,
+					moved: false
+				};
 				event.preventDefault();
 				const handle = event.currentTarget;
 				if (typeof handle.setPointerCapture === 'function') {
@@ -435,6 +618,20 @@ window.__ModuleLoader__.load({
 					}
 				}
 				setDragging(true);
+			};
+
+			const collapseCard = () => {
+				setCompact(true);
+				saveCompact(true);
+			};
+
+			const expandCard = () => {
+				if (suppressClickRef.current) {
+					suppressClickRef.current = false;
+					return;
+				}
+				setCompact(false);
+				saveCompact(false);
 			};
 
 			const field = (key, label) =>
@@ -486,6 +683,33 @@ window.__ModuleLoader__.load({
 				)
 			);
 
+			const tools = h(
+				'span',
+				{ className: 'ofw-tools' },
+				h(
+					'button',
+					{
+						type: 'button',
+						className: 'ofw-tool',
+						title: t('card.collapse'),
+						'aria-label': t('card.collapse'),
+						onClick: collapseCard
+					},
+					collapseIcon()
+				),
+				h(
+					'button',
+					{
+						type: 'button',
+						className: 'ofw-tool',
+						title: t('settings.open'),
+						'aria-label': t('settings.open'),
+						onClick: openSettings
+					},
+					settingsIcon()
+				)
+			);
+
 			const cardView = h(
 				'div',
 				{ className: 'ofw-body', onPointerDown: startDrag },
@@ -495,17 +719,7 @@ window.__ModuleLoader__.load({
 					h('span', { className: 'ofw-lead', 'aria-hidden': true }, leadIcon()),
 					h('span', { className: 'ofw-label' }, title),
 					h('span', { className: 'ofw-time' }, value),
-					h(
-						'button',
-						{
-							type: 'button',
-							className: 'ofw-gear',
-							title: t('settings.open'),
-							'aria-label': t('settings.open'),
-							onClick: openSettings
-						},
-						settingsIcon()
-					)
+					tools
 				),
 				h(
 					'div',
@@ -527,24 +741,54 @@ window.__ModuleLoader__.load({
 				)
 			);
 
+			const miniView = h(
+				'button',
+				{
+					ref: cardRef,
+					type: 'button',
+					className: 'ofw-mini',
+					'data-kind': state.kind,
+					'data-dragging': dragging ? 'true' : 'false',
+					title: t('card.expand'),
+					'aria-label': t('card.label') + ' · ' + t('card.expand'),
+					onPointerDown: startDrag,
+					onClick: expandCard
+				},
+				h('span', { className: 'ofw-lead', 'aria-hidden': true }, leadIcon()),
+				h('span', { className: 'ofw-mini-time' }, value),
+				h(
+					'span',
+					{ className: 'ofw-mini-track', 'aria-hidden': true },
+					h('span', { className: 'ofw-mini-fill', style: { width: percent + '%' } })
+				)
+			);
+
 			const rootStyle =
-				position === null ? undefined : { left: position.x + 'px', top: position.y + 'px', right: 'auto' };
+				position === null
+					? panelShift > 0
+						? { right: panelShift + 16 + 'px' }
+						: undefined
+					: { left: Math.max(0, position.x - panelShift) + 'px', top: position.y + 'px', right: 'auto' };
+
+			if (rightPanel.fullscreen) return null;
 
 			return h(
 				'div',
 				{ className: 'ofw-root', style: rootStyle },
 				h('style', null, CSS),
-				h(
-					'section',
-					{
-						ref: cardRef,
-						className: 'ofw-card',
-						'data-kind': state.kind,
-						'data-dragging': dragging ? 'true' : 'false',
-						'aria-label': t('card.label')
-					},
-					mode === 'settings' ? settingsView : cardView
-				)
+				compact || rightPanel.open
+					? miniView
+					: h(
+							'section',
+							{
+								ref: cardRef,
+								className: 'ofw-card',
+								'data-kind': state.kind,
+								'data-dragging': dragging ? 'true' : 'false',
+								'aria-label': t('card.label')
+							},
+							mode === 'settings' ? settingsView : cardView
+						)
 			);
 		}
 
